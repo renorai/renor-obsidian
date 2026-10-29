@@ -1,0 +1,21 @@
+{
+  "name": "renor-obsidian",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Obsidian plugin for Renor: share chosen folders with your AI agents' memory, see what they saved, ask Renor.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit && node esbuild.config.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node scripts/test.mjs",
+    "test:standalone": "vitest run --exclude test/engine.test.ts --exclude test/plugin.test.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "esbuild": "^0.28.2",
+    "obsidian": "^1.14.4",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.5"
+  }
+}

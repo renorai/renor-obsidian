@@ -1,0 +1,10 @@
+{
+  "id": "renor",
+  "name": "Renor",
+  "version": "0.1.0",
+  "minAppVersion": "1.11.4",
+  "description": "Share chosen folders with your AI agents' memory, see what they saved, and ask what they know.",
+  "author": "Renor",
+  "authorUrl": "https://renor.cloud",
+  "isDesktopOnly": false
+}
