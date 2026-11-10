@@ -71,6 +71,7 @@ class El {
   private listeners = new Map<string, Handler>();
   setText(t: string) { this.text = t; }
   createEl(_tag: string, o?: { text?: string }) { const el = new El(); el.text = o?.text ?? ''; this.children.push(el); return el; }
+  createDiv(o?: { text?: string }) { return this.createEl('div', o); }
   /** All text below this element, children joined by newlines. */
   allText(): string { return [this.text, ...this.children.map(c => c.allText())].filter(Boolean).join('\n'); }
   appendChild(el: El) { this.children.push(el); }

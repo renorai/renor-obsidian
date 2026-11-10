@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { App, Editor, MarkdownView, TFile, TFolder, notices, settings } from './obsidian-mock'; // the same module src/ gets for 'obsidian' (vitest.config.ts)
 import RenorPlugin, { AskModal, SECRET_ID } from '../src/main';
-import { fetchHttp } from '../src/mcp';
+import { fetchHttp } from './http';
 import { engineBuilt, startEngine, type Engine } from './engine';
 
 const run = engineBuilt() ? describe : describe.skip;

@@ -52,6 +52,16 @@ describe('the plugin and renor.json', () => {
   };
   const edit = async (app: App, text: string) => { await app.vault.modify(new TFile(CONFIG_PATH), text); await new Promise(r => setTimeout(r, 0)); };
 
+  test('a folder shared while the file is being read is not reverted by that stale read', async () => {
+    const { app, plugin } = await setup({ [CONFIG_PATH]: JSON.stringify({ sharedFolders: [], privateFolders: [] }) });
+    const read = app.vault.read.bind(app.vault);
+    app.vault.read = async (f: TFile) => { const text = await read(f); await new Promise(r => setTimeout(r, 20)); return text; };
+    const loading = plugin.loadConfigFile(false);
+    plugin.settings.sharedFolders.push('Work'); // the user shares a folder while the read is in flight
+    await loading;
+    expect(plugin.settings.sharedFolders).toEqual(['Work']);
+  });
+
   test('the file is created from the settings when missing, and has no key in it', async () => {
     const { app, plugin } = await setup({}, { settings: { sharedFolders: ['Work'], privateFolders: [] } });
     app.secretStorage.setSecret(SECRET_ID, 'sk-secret-123');

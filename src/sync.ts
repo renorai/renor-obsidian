@@ -39,10 +39,17 @@ export function importLabel(vaultName: string): string {
 const FILE_LIMIT_BYTES = 64 * 1024;
 
 /** Why Renor would not take this note, from a preview: a skipped file, or a note its secret guard held back. */
-function skipReason(preview: any): string | undefined {
-  const skipped = preview?.skipped?.[0];
+interface ImportPreview {
+  batchId: string;
+  skipped?: Array<{ reason?: string; detail?: string }>;
+  secretGuard?: { notes?: unknown[] };
+  conflicts?: string[];
+}
+
+function skipReason(preview: ImportPreview): string | undefined {
+  const skipped = preview.skipped?.[0];
   if (skipped) return String(skipped.reason ?? skipped.detail ?? 'skipped by Renor');
-  if (preview?.secretGuard?.notes?.length) return 'Renor held it back: it looks like it contains a password, key or token';
+  if (preview.secretGuard?.notes?.length) return 'Renor held it back: it looks like it contains a password, key or token';
   return undefined;
 }
 
@@ -90,8 +97,8 @@ export class ImportToolsBackend implements SyncBackend {
     await this.save();
   }
 
-  private preview(path: string, markdown: string, stage: boolean): Promise<any> {
-    return this.client.call('preview_import', { label: this.label, files: [{ relativePath: path, markdown }], stage });
+  private preview(path: string, markdown: string, stage: boolean): Promise<ImportPreview> {
+    return this.client.call<ImportPreview>('preview_import', { label: this.label, files: [{ relativePath: path, markdown }], stage });
   }
 }
 
@@ -104,7 +111,7 @@ const emptyReport = (): SyncReport => ({ synced: 0, unchanged: 0, removed: 0, sk
  */
 export class SyncEngine {
   private chain: Promise<unknown> = Promise.resolve();
-  private timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private timers = new Map<string, number>();
   last: SyncReport = emptyReport();
 
   constructor(
@@ -156,8 +163,8 @@ export class SyncEngine {
   /** A note was created or modified. */
   changed(path: string): void {
     if (!isShared(path, this.rules()) && !this.tracked().includes(path)) return;
-    clearTimeout(this.timers.get(path));
-    this.timers.set(path, setTimeout(() => { this.timers.delete(path); void this.flush(path); }, this.debounceMs));
+    window.clearTimeout(this.timers.get(path));
+    this.timers.set(path, window.setTimeout(() => { this.timers.delete(path); void this.flush(path); }, this.debounceMs));
   }
 
   /** Sync one note now (also what a debounced change ends in). */
@@ -171,7 +178,7 @@ export class SyncEngine {
   }
 
   deleted(path: string): Promise<SyncReport> {
-    clearTimeout(this.timers.get(path));
+    window.clearTimeout(this.timers.get(path));
     return this.enqueue(async () => {
       const report = emptyReport();
       if (this.tracked().includes(path)) await this.removeOne(path, report);
@@ -189,12 +196,12 @@ export class SyncEngine {
   /** Wait for everything queued, including debounced edits (tests; plugin unload). */
   async idle(): Promise<void> {
     const pending = [...this.timers.keys()];
-    for (const path of pending) { clearTimeout(this.timers.get(path)); this.timers.delete(path); void this.flush(path); }
+    for (const path of pending) { window.clearTimeout(this.timers.get(path)); this.timers.delete(path); void this.flush(path); }
     await this.chain;
   }
 
   stop(): void {
-    for (const t of this.timers.values()) clearTimeout(t);
+    for (const t of this.timers.values()) window.clearTimeout(t);
     this.timers.clear();
   }
 }
