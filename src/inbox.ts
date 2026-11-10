@@ -61,7 +61,7 @@ export function renorIdOf(text: string): string | undefined {
   const front = /^---\r?\n([\s\S]*?)\r?\n---(\r?\n|$)/.exec(text);
   const line = front && /^renor_id:\s*(.+?)\s*$/m.exec(front[1]);
   if (!line) return undefined;
-  try { const v = JSON.parse(line[1]); return typeof v === 'string' ? v : undefined; } catch { return line[1]; }
+  try { const v: unknown = JSON.parse(line[1]); return typeof v === 'string' ? v : undefined; } catch { return line[1]; }
 }
 
 /** Pulls the newest memories agents saved into `folder`. Existing notes are rewritten only when Renor's text changed. */

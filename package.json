@@ -9,13 +9,17 @@
     "build": "tsc --noEmit && node esbuild.config.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/test.mjs",
-    "test:standalone": "vitest run --exclude test/engine.test.ts --exclude test/plugin.test.ts"
+    "test:standalone": "vitest run --exclude test/engine.test.ts --exclude test/plugin.test.ts",
+    "lint": "eslint src"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
     "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "eslint-plugin-obsidianmd": "^0.5.1",
     "obsidian": "^1.14.4",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.2",
     "vitest": "^5.0.5"
   }
 }

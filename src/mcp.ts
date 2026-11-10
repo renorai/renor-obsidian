@@ -39,8 +39,12 @@ export function checkServerUrl(raw: string): string {
   throw new RenorError('Server must be an https:// address (plain http:// only to 127.0.0.1 or localhost), so your key and notes are never sent unencrypted');
 }
 
+interface ToolContent { type?: string; text?: string }
+interface ToolResult { content?: ToolContent[]; isError?: boolean; structuredContent?: unknown }
+interface RpcMessage { id?: number; result?: unknown; error?: { message?: string } }
+
 /** One JSON-RPC message out of a reply that is either plain JSON or a text/event-stream. */
-function parseReply(res: HttpResponse, id: number): any {
+function parseReply(res: HttpResponse, id: number): RpcMessage {
   const type = res.headers['content-type'] ?? '';
   const candidates: string[] = [];
   if (type.includes('text/event-stream')) {
@@ -52,9 +56,9 @@ function parseReply(res: HttpResponse, id: number): any {
     candidates.push(res.text);
   }
   for (const raw of candidates) {
-    let msg: any;
+    let msg: unknown;
     try { msg = JSON.parse(raw); } catch { continue; }
-    for (const m of Array.isArray(msg) ? msg : [msg]) if (m && m.id === id) return m;
+    for (const m of (Array.isArray(msg) ? msg : [msg]) as Array<RpcMessage | null>) if (m && m.id === id) return m;
   }
   throw new RenorError(`Renor sent a reply the plugin could not read (HTTP ${res.status})`, res.status);
 }
@@ -82,7 +86,7 @@ export class RenorClient {
     return h;
   }
 
-  private async rpc(method: string, params: unknown): Promise<any> {
+  private async rpc(method: string, params: unknown): Promise<unknown> {
     const id = this.nextId++;
     const res = await this.http({ url: this.url, method: 'POST', headers: this.headers(), body: JSON.stringify({ jsonrpc: '2.0', id, method, params }) });
     if (res.status === 401 || res.status === 403) throw new RenorError('Renor refused the API key: check it in the plugin settings', res.status);
@@ -103,12 +107,12 @@ export class RenorClient {
   }
 
   /** Calls one tool and returns its JSON body. A tool error (isError) becomes a RenorError carrying the tool's own words. */
-  async call<T = any>(name: string, args: Record<string, unknown> = {}): Promise<T> {
+  async call<T = Record<string, unknown>>(name: string, args: Record<string, unknown> = {}): Promise<T> {
     for (let attempt = 0; ; attempt++) {
       await this.initialize();
       try {
-        const result = await this.rpc('tools/call', { name, arguments: args });
-        const text = (result?.content ?? []).filter((c: any) => c?.type === 'text').map((c: any) => c.text).join('\n');
+        const result = (await this.rpc('tools/call', { name, arguments: args })) as ToolResult | undefined;
+        const text = (result?.content ?? []).filter(c => c?.type === 'text').map(c => c.text ?? '').join('\n');
         if (result?.isError) throw new RenorError(text || `${name} failed`);
         if (result?.structuredContent) return result.structuredContent as T;
         try { return JSON.parse(text) as T; } catch { return { text } as T; }
@@ -120,11 +124,3 @@ export class RenorClient {
     }
   }
 }
-
-/** Node / browser fetch as an HttpFn (tests, and anywhere outside Obsidian). */
-export const fetchHttp: HttpFn = async req => {
-  const res = await fetch(req.url, { method: req.method, headers: req.headers, body: req.body });
-  const headers: Record<string, string> = {};
-  res.headers.forEach((v, k) => { headers[k.toLowerCase()] = v; });
-  return { status: res.status, headers, text: await res.text() };
-};

@@ -54,9 +54,9 @@ export default class RenorPlugin extends Plugin {
     this.addSettingTab(new RenorSettingTab(this.app, this));
     this.status = this.addStatusBarItem();
 
-    this.addCommand({ id: 'ask', name: 'Ask Renor', callback: () => new AskModal(this.app, this).open() });
+    this.addCommand({ id: 'ask', name: 'Ask your agents\' memory', callback: () => new AskModal(this.app, this).open() });
     this.addCommand({ id: 'sync-now', name: 'Sync shared folders now', callback: () => void this.reconcile(true) });
-    this.addCommand({ id: 'pull-saved', name: 'Pull what agents saved into the Renor folder', callback: () => void this.pull(true) });
+    this.addCommand({ id: 'pull-saved', name: 'Pull what agents saved into the memory folder', callback: () => void this.pull(true) });
 
     this.registerEvent(this.app.workspace.on('file-menu', (menu, file) => {
       if (!(file instanceof TFolder)) return;
@@ -203,9 +203,13 @@ export default class RenorPlugin extends Plugin {
   async loadConfigFile(startup: boolean): Promise<void> {
     const file = this.app.vault.getFileByPath(CONFIG_PATH);
     if (!file) { await this.writeConfigFile(); return; }
+    const asked = serializeConfig(this.settings);
     let parsed;
     try { parsed = parseConfig(await this.app.vault.read(file), this.settings.renorFolder, this.app.vault.configDir); }
     catch (err) { new Notice(`Renor: ${(err as Error).message}; keeping the folders as they are`); return; }
+    // The folders changed while the file was being read (this plugin's own write is still landing): what was read is
+    // already stale, and the write in flight raises another file event that will be read in its turn.
+    if (serializeConfig(this.settings) !== asked) return;
     if (parsed.ignored.length > 0) new Notice(`Renor: ignored in ${CONFIG_PATH}: ${parsed.ignored.join('; ')}`);
     const before = { sharedFolders: this.settings.sharedFolders, privateFolders: this.settings.privateFolders };
     // A file edit never makes a private folder shareable: dropped entries stay private until removed in Settings.
@@ -279,7 +283,7 @@ export class AskModal extends Modal {
     let question = editor?.getSelection() ?? '';
     let answer = '';
     let insert: ButtonComponent | undefined;
-    const output = this.contentEl.createEl('div', { cls: 'renor-answer' });
+    const output = this.contentEl.createDiv({ cls: 'renor-answer' });
     const ask = async () => {
       const client = this.plugin.client();
       if (!client) { output.setText(this.plugin.connectionProblem() ?? 'Renor: not connected'); return; }
@@ -348,23 +352,19 @@ export class RenorSettingTab extends PluginSettingTab {
       .setDesc('Nothing leaves this vault until you choose a folder. Notes in it reach your agents through Renor and stay in sync as you edit, move or delete them.');
     for (const folder of p.settings.sharedFolders) {
       new Setting(containerEl).setName(folder === '/' ? '/ (whole vault)' : folder)
-        .addExtraButton(b => b.setIcon('x').setTooltip('Stop sharing (withdraws its notes from Renor)').onClick(async () => {
-          await p.unshareFolder(folder); this.display();
-        }));
+        .addExtraButton(b => b.setIcon('x').setTooltip('Stop sharing (withdraws its notes from Renor)').onClick(() => { void p.unshareFolder(folder).then(() => this.display()); }));
     }
     new Setting(containerEl).addButton(b => b.setButtonText('Add shared folder').onClick(() => {
-      new FolderPicker(this.app, async f => { await p.shareFolder(f.isRoot() ? '/' : f.path); this.display(); }).open();
+      new FolderPicker(this.app, f => { void p.shareFolder(f.isRoot() ? '/' : f.path).then(() => this.display()); }).open();
     }));
 
     new Setting(containerEl).setName('Private folders').setHeading()
       .setDesc(`Never shared, even inside a shared folder. The ${p.settings.renorFolder}/ folder and Obsidian's settings are never shared either.`);
     for (const folder of p.settings.privateFolders) {
-      new Setting(containerEl).setName(folder).addExtraButton(b => b.setIcon('x').setTooltip('Remove').onClick(async () => {
-        await p.removePrivate(folder); this.display();
-      }));
+      new Setting(containerEl).setName(folder).addExtraButton(b => b.setIcon('x').setTooltip('Remove').onClick(() => { void p.removePrivate(folder).then(() => this.display()); }));
     }
     new Setting(containerEl).addButton(b => b.setButtonText('Add private folder').onClick(() => {
-      new FolderPicker(this.app, async f => { if (!f.isRoot()) { await p.markPrivate(f.path); this.display(); } }).open();
+      new FolderPicker(this.app, f => { if (!f.isRoot()) void p.markPrivate(f.path).then(() => this.display()); }).open();
     }));
 
     new Setting(containerEl).setName('What agents saved').setHeading();

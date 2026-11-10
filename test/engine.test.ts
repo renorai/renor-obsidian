@@ -1,7 +1,8 @@
 // Against the real self-hosted engine, offline: sync, edit, unshare, delete, secrets, the Renor folder, Ask Renor.
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { engineBuilt, startEngine, type Engine } from './engine';
-import { RenorClient, fetchHttp } from '../src/mcp';
+import { RenorClient } from '../src/mcp';
+import { fetchHttp } from './http';
 import { ImportToolsBackend, SyncEngine, importLabel, type SyncState } from '../src/sync';
 import type { SharingRules } from '../src/sharing';
 import { pullInbox, type InboxState, type NoteWriter } from '../src/inbox';

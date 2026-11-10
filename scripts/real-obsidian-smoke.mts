@@ -13,6 +13,7 @@ const require = createRequire(import.meta.url);
 const [OBSIDIAN, S, PW = 'playwright-core'] = process.argv.slice(2);
 const { chromium } = require(PW);
 import { spawn } from 'node:child_process';
+const PORT = process.env.CDP_PORT ?? '9333';
 const PLUGIN = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const shots = path.join(S, 'shots'); fs.mkdirSync(shots, { recursive: true });
 const engine = await startEngine();
@@ -28,10 +29,10 @@ fs.writeFileSync(path.join(pdir, 'data.json'), JSON.stringify({ settings: { serv
 fs.writeFileSync(path.join(vault, '.obsidian/community-plugins.json'), '["renor"]');
 const cfg = path.join(home, '.config/obsidian'); fs.mkdirSync(cfg, { recursive: true });
 fs.writeFileSync(path.join(cfg, 'obsidian.json'), JSON.stringify({ vaults: { a1b2c3d4e5f60718: { path: vault, ts: Date.now(), open: true } } }));
-const proc = spawn(OBSIDIAN, ['--no-sandbox', '--disable-gpu', '--remote-debugging-port=9333'], { env: { ...process.env, HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') }, stdio: ['ignore', 'pipe', 'pipe'] });
+const proc = spawn(OBSIDIAN, ['--no-sandbox', '--disable-gpu', `--remote-debugging-port=${PORT}`], { env: { ...process.env, HOME: home, XDG_CONFIG_HOME: path.join(home, '.config') }, stdio: ['ignore', 'pipe', 'pipe'] });
 let plog = ''; proc.stdout!.on('data', c => { plog += c; }); proc.stderr!.on('data', c => { plog += c; });
 let browser: any;
-for (let i = 0; i < 60 && !browser; i++) { try { browser = await chromium.connectOverCDP('http://127.0.0.1:9333'); } catch { await new Promise(r => setTimeout(r, 1000)); } }
+for (let i = 0; i < 60 && !browser; i++) { try { browser = await chromium.connectOverCDP(`http://127.0.0.1:${PORT}`); } catch { await new Promise(r => setTimeout(r, 1000)); } }
 if (!browser) { console.log(plog); throw new Error('no CDP'); }
 let page: any;
 for (let i = 0; i < 60 && !page; i++) { page = browser.contexts().flatMap((c: any) => c.pages()).find((p: any) => !p.url().startsWith('devtools')); if (!page) await new Promise(r => setTimeout(r, 1000)); }

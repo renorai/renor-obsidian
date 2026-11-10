@@ -6,10 +6,10 @@ your own agents can recall them through Renor. What those agents save shows up b
 - **Nothing is shared until you choose a folder.** Private folders, the `Renor/` folder and Obsidian's settings are never shared.
 - **Live sync.** Edits, renames and deletions reach Renor a couple of seconds after you stop typing. An edit replaces the old copy, so recall never sees two versions of one note.
 - **What agents saved** lands in `Renor/` as notes. This is a one-way copy: edit a memory from an agent or the Renor dashboard, not in the copy.
-- **Ask Renor** (command palette): ask what your agents' memory holds and insert the answer into the current note.
+- **Ask your agents' memory** (command palette): ask what your agents' memory holds and insert the answer into the current note.
 
 **Network and account.** The plugin talks only to the Renor server in its settings (`https://mcp.renor.cloud/mcp` by
-default), and only for three things: notes in folders you shared, your Ask Renor questions, and pulling what agents
+default), and only for three things: notes in folders you shared, your questions to your agents' memory, and pulling what agents
 saved. It needs a Renor account and API key. The plugin itself sends no telemetry.
 
 ## Install (unpacked, before a community-plugins listing)
@@ -42,7 +42,7 @@ Settings → Renor
   Pull every         15 minutes
 ```
 
-Commands: **Ask Renor**, **Sync shared folders now**, **Pull what agents saved into the Renor folder**.
+Commands: **Ask your agents' memory**, **Sync shared folders now**, **Pull what agents saved into the memory folder**.
 
 ## How it reaches Renor (no second importer)
 
@@ -54,7 +54,7 @@ The plugin uses Renor's existing import tools over MCP. It does not have an impo
 | note deleted, moved out, or its folder unshared / marked private | `undo_import` of its batch (the copy is retired, recoverable from Renor's trash) |
 | rename | removal of the old path, then sync of the new one |
 | "Pull what agents saved" | `memory_map`, `read_memory` (memories whose origin is `import` are skipped, so nothing echoes) |
-| Ask Renor | `get_context` |
+| Ask your agents' memory | `get_context` |
 
 Notes land in Renor under `Imported/obsidian-<vault name>/<path in vault>`. Each note is its own batch, so one edit
 replaces one note. A note Renor will not take is listed under **Settings → Renor → Not synced**, and the copy already in
